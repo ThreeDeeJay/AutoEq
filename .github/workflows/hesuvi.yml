@@ -1,0 +1,46 @@
+name: HeSuVi
+
+on:
+  push:
+    paths:
+      - 'results/**'
+      - '.github/workflows/hesuvi.yml'
+
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  HeSuVi:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v3
+
+    - name: Get current date
+      run: echo "CurrentDate=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+    - name: Get commit hash
+      run: echo "CommitHash=$(git rev-parse --short=7 HEAD)" >> $GITHUB_ENV
+
+    - name: Run Python script
+      run: |
+        sudo apt install python3-dev python3-pip python3-venv libsndfile1
+        python -m venv venv
+        . venv/bin/activate
+        python -m pip install -U pip
+        python -m pip install -U -e .
+        python -m autoeq --help
+        pip install rapidfuzz
+        python results/update_indexes.py
+
+    - name: GitHub pre-release
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{secrets.GITHUB_TOKEN}}"
+        automatic_release_tag: "hesuvi"
+        prerelease: true
+        title: "[${{env.CurrentDate}}] HeSuVi-${{env.CommitHash}}"
+        files: "results/hesuvi.zip"
